@@ -11,9 +11,9 @@ import (
 
 	"github.com/brodyhoskins/mailcloak/discover"
 	"github.com/brodyhoskins/mailcloak/fetch"
-	"github.com/brodyhoskins/mailcloak/internal/pipeline"
 	"github.com/brodyhoskins/mailcloak/mimeutil"
 	"github.com/brodyhoskins/mailcloak/pgp"
+	"github.com/brodyhoskins/mailcloak/pipeline"
 )
 
 // TestAutocryptRoundTrip: our encrypt filter advertises alice's key, the

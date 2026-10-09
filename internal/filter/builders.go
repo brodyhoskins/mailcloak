@@ -13,10 +13,10 @@ import (
 	"github.com/brodyhoskins/mailcloak/discover"
 	"github.com/brodyhoskins/mailcloak/dnssec"
 	"github.com/brodyhoskins/mailcloak/fetch"
-	"github.com/brodyhoskins/mailcloak/internal/hooks"
-	"github.com/brodyhoskins/mailcloak/internal/pipeline"
+	"github.com/brodyhoskins/mailcloak/hooks"
 	"github.com/brodyhoskins/mailcloak/internal/version"
 	"github.com/brodyhoskins/mailcloak/pgp"
+	"github.com/brodyhoskins/mailcloak/pipeline"
 	"github.com/brodyhoskins/mailcloak/smime"
 )
 

@@ -12,7 +12,7 @@ import (
 
 	"github.com/emersion/go-smtp"
 
-	"github.com/brodyhoskins/mailcloak/internal/pipeline"
+	"github.com/brodyhoskins/mailcloak/pipeline"
 )
 
 // TLS modes for upstream connections.

@@ -16,7 +16,7 @@ import (
 	"github.com/emersion/go-smtp"
 
 	"github.com/brodyhoskins/mailcloak/internal/deliver"
-	"github.com/brodyhoskins/mailcloak/internal/pipeline"
+	"github.com/brodyhoskins/mailcloak/pipeline"
 )
 
 var log = slog.New(slog.NewTextHandler(io.Discard, nil))
