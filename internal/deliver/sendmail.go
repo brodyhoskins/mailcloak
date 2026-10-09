@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/brodyhoskins/mailcloak/internal/pipeline"
+	"github.com/brodyhoskins/mailcloak/pipeline"
 )
 
 // Sendmail reinjects a message with the MTA's sendmail(1) command. This is how

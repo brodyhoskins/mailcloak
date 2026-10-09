@@ -29,10 +29,10 @@ import (
 
 	"github.com/brodyhoskins/mailcloak/config"
 	"github.com/brodyhoskins/mailcloak/internal/deliver"
-	"github.com/brodyhoskins/mailcloak/internal/pipeline"
 	"github.com/brodyhoskins/mailcloak/internal/server"
 	"github.com/brodyhoskins/mailcloak/internal/version"
 	"github.com/brodyhoskins/mailcloak/mimeutil"
+	"github.com/brodyhoskins/mailcloak/pipeline"
 )
 
 // Exit statuses from sysexits.h, as interpreted by Postfix pipe(8).

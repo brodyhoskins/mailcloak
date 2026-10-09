@@ -13,9 +13,9 @@ import (
 	"github.com/emersion/go-smtp"
 
 	"github.com/brodyhoskins/mailcloak/discover"
-	"github.com/brodyhoskins/mailcloak/internal/pipeline"
 	"github.com/brodyhoskins/mailcloak/mimeutil"
 	"github.com/brodyhoskins/mailcloak/pgp"
+	"github.com/brodyhoskins/mailcloak/pipeline"
 	"github.com/brodyhoskins/mailcloak/smime"
 )
 

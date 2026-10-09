@@ -18,7 +18,7 @@ import (
 
 	"github.com/emersion/go-smtp"
 
-	"github.com/brodyhoskins/mailcloak/internal/pipeline"
+	"github.com/brodyhoskins/mailcloak/pipeline"
 )
 
 // Server is a filter listener.
