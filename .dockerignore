@@ -1,6 +1,10 @@
-*
-!go.mod
-!go.sum
-!cmd/
-!internal/
-!data/
+.git
+.github
+.claude
+.env
+build
+dist
+examples
+packaging
+mailcloak-decrypt
+mailcloak-encrypt
