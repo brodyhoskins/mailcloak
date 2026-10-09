@@ -1,0 +1,23 @@
+# mailcloak as Postfix after-queue content filters, pipe mode.
+#
+# content_filter must be set per smtpd service with -o, NOT in main.cf:
+# filtered mail is reinjected with sendmail(1), and a global content_filter
+# would send it straight back through the filter.
+
+# Mail from the internet → decrypt.
+smtp       inet  n  -  n  -  -  smtpd
+  -o content_filter=mailcloak-decrypt:dummy
+
+# Mail from your users → sign/encrypt.
+submission inet  n  -  n  -  -  smtpd
+  -o content_filter=mailcloak-encrypt:dummy
+  -o smtpd_tls_security_level=encrypt
+  -o smtpd_sasl_auth_enable=yes
+
+mailcloak-decrypt unix  -  n  n  -  10  pipe
+  flags=Rq user=mailcloak null_sender=
+  argv=/usr/bin/mailcloak-decrypt -output sendmail -f ${sender} -- ${recipient}
+
+mailcloak-encrypt unix  -  n  n  -  10  pipe
+  flags=Rq user=mailcloak null_sender=
+  argv=/usr/bin/mailcloak-encrypt -output sendmail -f ${sender} -- ${recipient}

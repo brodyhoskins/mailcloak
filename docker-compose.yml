@@ -1,0 +1,20 @@
+# Test environment: Postfix + mailcloak, delivering everything to Mailpit.
+#   make docker-test           build, run the end-to-end tests, tear down
+#   make docker-test KEEP=1    leave it running; Mailpit UI on http://localhost:8025
+name: mailcloak-test
+
+services:
+  postfix:
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-test}
+    depends_on: [mailpit]
+    ports:
+      - "127.0.0.1:2525:25"   # inbound  → mailcloak-decrypt
+      - "127.0.0.1:2587:587"  # outbound → mailcloak-encrypt
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "127.0.0.1:8025:8025"  # web UI and API

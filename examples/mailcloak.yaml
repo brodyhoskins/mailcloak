@@ -1,0 +1,68 @@
+# /etc/mailcloak/mailcloak.yaml — read by both mailcloak-encrypt and
+# mailcloak-decrypt. Shared settings are top-level; each filter's own settings
+# are under encrypt: / decrypt:. Most can also be given as flags
+# (-pgp, -smime, -state, -output, -listen). Path settings may use ${VAR},
+# e.g. ${RUNTIME_DIRECTORY} under systemd.
+
+keys:
+  pgp:
+    dir: /etc/mailcloak/pgp          # recipients' public keys + your users' private keys
+    # passphrase_file: /etc/mailcloak/pgp-passphrase
+  smime:
+    dir: /etc/mailcloak/smime        # name.crt (+ chain), optional name.key
+
+# Discovered and harvested keys, shared by both filters. Run both as the same
+# user (e.g. "mailcloak") so each can read what the other writes. Under
+# systemd, StateDirectory= sets this automatically.
+state_dir: /var/lib/mailcloak
+
+# Every DNS lookup mailcloak makes goes to this resolver, which must validate
+# DNSSEC (Unbound, or systemd-resolved with DNSSEC=yes). Its AD bit is only
+# trusted on loopback or in trusted_networks.
+dns:
+  resolver: 127.0.0.1:53             # default: first nameserver in /etc/resolv.conf,
+                                     # re-read when it changes and checked per lookup
+  # Resolvers trusted besides loopback. List exact addresses, e.g. Tailscale
+  # MagicDNS, not 100.64.0.0/10 (ISPs use that range for carrier-grade NAT).
+  # trusted_networks: [100.100.100.100/32, "fd7a:115c:a1e0::53/128"]
+
+discovery:
+  wkd: true                          # Web Key Directory on the recipient's domain (HTTPS)
+  openpgpkey: true                   # OPENPGPKEY records, DNSSEC-signed only (RFC 7929)
+  smimea: true                       # SMIMEA records, DNSSEC-signed only (RFC 8162)
+  # keyserver: https://keys.openpgp.org   # off by default: it learns who you mail
+  autocrypt: true                    # decrypt harvests Autocrypt headers; encrypt uses them
+  autocrypt_require_mutual: true     # only if the peer asked for encryption
+  # smime_harvest: true              # default: on when state_dir is set. decrypt keeps
+                                     # certs from CA-verified signed mail; encrypt uses them
+  # Added to the system roots. Debian/Ubuntu's ca-certificates has only TLS
+  # roots, so certs from a few email-only CAs won't be harvested without this.
+  # smime_ca_file: /etc/mailcloak/email-roots.pem
+  timeout: 5s
+  cache_ttl: 24h
+  negative_ttl: 1h
+
+# sendmail:
+#   path: /usr/sbin/sendmail
+#   args: ["-G", "-i"]
+# log: syslog                        # syslog | stderr | none | /path/to/file
+
+encrypt:
+  mode: opportunistic                # opportunistic | strict (only encrypted mail leaves)
+  prefer: [pgp, smime]               # which method wins if a recipient has both
+  local_domains: [corp.example]      # never encrypted (internal mail skips decrypt)
+  # key sources trusted in strict mode (autocrypt and keyserver are left out)
+  strict_sources: [local, wkd, openpgpkey, smimea, smime-harvest]
+  autocrypt:
+    advertise: true                  # add an Autocrypt header with the sender's key
+    prefer_encrypt: mutual
+  output: sendmail                   # "-" (stdout) | sendmail | smtp:host:port | smtp:unix:/path
+  # Daemon mode (LMTP). The directory must be inside Postfix's queue directory
+  # if its lmtp client is chrooted; see examples/systemd.
+  # listen: unix:/var/spool/postfix/mailcloak/encrypt.sock
+  # output: smtp:127.0.0.1:10026
+
+decrypt:
+  output: sendmail
+  # listen: unix:/var/spool/postfix/mailcloak/decrypt.sock
+  # output: smtp:127.0.0.1:10026

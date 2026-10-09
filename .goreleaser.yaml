@@ -1,0 +1,118 @@
+archives:
+  - files:
+      - examples/**
+      - LICENSE
+      - README.md
+    formats: [tar.gz, tar.zst]
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}"
+
+before:
+  hooks:
+    - go mod verify
+    - rm -rf build
+    - mkdir build
+    - sh -c "git archive --prefix={{ .ProjectName }}-{{ .Version }}/ {{ .FullCommit }} | zstd -19 -q -o build/{{ .ProjectName }}-{{ .Version }}.tar.zst"
+
+builds:
+  - &build
+    binary: mailcloak-decrypt
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goarch: ["386", amd64, arm, arm64]
+    goarm: ["6"]
+    goos: [darwin, freebsd, linux, netbsd, openbsd]
+    id: mailcloak-decrypt
+    ldflags:
+      - -s -w -X github.com/brodyhoskins/mailcloak/internal/version.Version={{ .Version }}
+    main: ./cmd/mailcloak-decrypt
+    mod_timestamp: "{{ .CommitTimestamp }}"
+  - <<: *build
+    goarch: [arm]
+    goarm: ["7"]
+    id: mailcloak-decrypt-armv7
+  - <<: *build
+    binary: mailcloak-encrypt
+    id: mailcloak-encrypt
+    main: ./cmd/mailcloak-encrypt
+  - <<: *build
+    binary: mailcloak-encrypt
+    goarch: [arm]
+    goarm: ["7"]
+    id: mailcloak-encrypt-armv7
+    main: ./cmd/mailcloak-encrypt
+
+changelog:
+  sort: asc
+  use: github
+
+checksum:
+  algorithm: sha256
+  extra_files:
+    - glob: build/{{ .ProjectName }}-{{ .Version }}.tar.zst
+  name_template: SHA256SUMS
+
+nfpms:
+  - &nfpm
+    bindir: /usr/bin
+    contents:
+      - dst: /etc/init.d/mailcloak
+        file_info:
+          mode: 0755
+        packager: apk
+        src: examples/openrc/mailcloak
+      - dst: /etc/init.d/mailcloak.decrypt
+        packager: apk
+        src: mailcloak
+        type: symlink
+      - dst: /etc/init.d/mailcloak.encrypt
+        packager: apk
+        src: mailcloak
+        type: symlink
+      - dst: /etc/mailcloak/mailcloak.yaml
+        src: examples/mailcloak.yaml
+        type: config|noreplace
+      - dst: /usr/lib/systemd/system/mailcloak@.service
+        packager: deb
+        src: examples/systemd/mailcloak@.service
+      - dst: /usr/lib/systemd/system/mailcloak@.service
+        packager: rpm
+        src: examples/systemd/mailcloak@.service
+      - dst: /usr/share/doc/mailcloak/examples
+        src: examples/
+      - dst: /usr/share/doc/mailcloak/LICENSE
+        src: LICENSE
+      - dst: /usr/share/doc/mailcloak/README.md
+        src: README.md
+    description: Postfix content filters for transparent email encryption using PGP and S/MIME.
+    file_name_template: "{{ .ConventionalFileName }}"
+    formats: [apk, rpm]
+    homepage: https://github.com/brodyhoskins/mailcloak
+    id: apk-rpm
+    license: MIT
+    maintainer: Brody Hoskins
+    package_name: mailcloak
+    scripts:
+      postinstall: packaging/postinstall.sh
+      preinstall: packaging/preinstall.sh
+  - <<: *nfpm
+    formats: [deb]
+    id: deb
+    ids: [mailcloak-decrypt, mailcloak-encrypt]
+
+project_name: mailcloak
+
+release:
+  draft: false
+  extra_files:
+    - glob: build/{{ .ProjectName }}-{{ .Version }}.tar.zst
+  prerelease: auto
+
+source:
+  enabled: true
+  format: tar.gz
+  name_template: "{{ .ProjectName }}-{{ .Version }}"
+  prefix_template: "{{ .ProjectName }}-{{ .Version }}/"
+
+version: 2

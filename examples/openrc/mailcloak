@@ -1,0 +1,27 @@
+#!/sbin/openrc-run
+
+filter="${RC_SVCNAME#mailcloak.}"
+
+command="/usr/bin/mailcloak-${filter}"
+command_background=true
+command_user="mailcloak:mailcloak"
+description="mailcloak ${filter} filter"
+error_logger="logger -t mailcloak-${filter} -p mail.info"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+	need net
+	use dns logger unbound
+	before postfix
+}
+
+start_pre() {
+	case "$filter" in
+	decrypt|encrypt) ;;
+	*)
+		eerror "Symlink this script as mailcloak.decrypt or mailcloak.encrypt"
+		return 1
+		;;
+	esac
+	checkpath -d -m 0750 -o mailcloak:mailcloak /var/lib/mailcloak /var/spool/postfix/mailcloak
+}

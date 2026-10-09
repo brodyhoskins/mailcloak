@@ -1,0 +1,30 @@
+# mailcloak as Postfix after-queue content filters, daemon mode.
+# Run the filters as daemons (examples/systemd/mailcloak@.service) with
+#   encrypt.listen: unix:/var/spool/postfix/mailcloak/encrypt.sock
+#   decrypt.listen: unix:/var/spool/postfix/mailcloak/decrypt.sock
+#   output: smtp:127.0.0.1:10026
+#
+# The socket directory lives inside the queue directory so a chrooted lmtp
+# client can reach it, and Postfix needs to be able to use the sockets:
+#   install -d -o mailcloak -g mailcloak -m 0750 /var/spool/postfix/mailcloak
+#   usermod -aG mailcloak postfix
+# Relative unix: paths below are relative to the queue directory.
+
+smtp       inet  n  -  n  -  -  smtpd
+  -o content_filter=lmtp:unix:mailcloak/decrypt.sock
+
+submission inet  n  -  n  -  -  smtpd
+  -o content_filter=lmtp:unix:mailcloak/encrypt.sock
+  -o smtpd_tls_security_level=encrypt
+  -o smtpd_sasl_auth_enable=yes
+
+# Where the filters hand mail back. No content filter, no milters, no
+# header/body checks; only reachable from localhost.
+127.0.0.1:10026 inet  n  -  n  -  10  smtpd
+  -o content_filter=
+  -o receive_override_options=no_unknown_recipient_checks,no_header_body_checks,no_milters
+  -o smtpd_helo_restrictions=
+  -o smtpd_client_restrictions=
+  -o smtpd_sender_restrictions=
+  -o smtpd_recipient_restrictions=permit_mynetworks,reject
+  -o mynetworks=127.0.0.0/8

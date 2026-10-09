@@ -1,0 +1,63 @@
+concurrency:
+  cancel-in-progress: false
+  group: release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: version
+        name: Read VERSION
+        run: |
+          v=$(tr -d '[:space:]' < VERSION)
+          if ! printf '%s' "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error file=VERSION::not a semantic version: $v"
+            exit 1
+          fi
+          echo "tag=v$v" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$v" >/dev/null; then
+            echo "v$v is already tagged; nothing to release."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.version.outputs.exists != 'true'
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - if: steps.version.outputs.exists != 'true'
+        name: Test
+        run: go test -race ./...
+
+      - env:
+          TAG: ${{ steps.version.outputs.tag }}
+        if: steps.version.outputs.exists != 'true'
+        name: Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "$TAG"
+
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: steps.version.outputs.exists != 'true'
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          args: release --clean
+          version: "~> v2"
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: [VERSION]
+  workflow_dispatch:
+
+permissions:
+  contents: write

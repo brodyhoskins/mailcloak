@@ -1,0 +1,17 @@
+# main.cf additions for mailcloak. The content_filter settings themselves go
+# in master.cf (see master.cf / master.cf.daemon), never here.
+
+# Don't re-encode 8-bit mail to 7-bit on the way out: it would break the
+# S/MIME signatures mailcloak-encrypt adds.
+disable_mime_output_conversion = yes
+
+# DANE: authenticate the next hop's TLS with DNSSEC-signed TLSA records, and
+# refuse to send to it in the clear when it publishes them. Encrypting the
+# message is only half the job if the route can be hijacked. Needs the same
+# local validating resolver mailcloak uses.
+smtp_dns_support_level = dnssec
+smtp_tls_security_level = dane
+smtp_host_lookup = dns
+
+# Inbound, publish TLSA records for your own MX so senders can do the same:
+#   _25._tcp.mx.example.org. IN TLSA 3 1 1 <sha256 of your key's SPKI>

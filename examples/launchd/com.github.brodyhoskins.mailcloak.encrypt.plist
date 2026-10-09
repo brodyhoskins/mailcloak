@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>GroupName</key>
+	<string>_mailcloak</string>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.github.brodyhoskins.mailcloak.encrypt</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/bin/mailcloak-encrypt</string>
+		<string>-config</string>
+		<string>/usr/local/etc/mailcloak/mailcloak.yaml</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/usr/local/var/log/mailcloak/encrypt.log</string>
+	<key>UserName</key>
+	<string>_mailcloak</string>
+</dict>
+</plist>

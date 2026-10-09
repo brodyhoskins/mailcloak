@@ -1,0 +1,25 @@
+# mailcloak config for the test container. Network discovery is off so the
+# tests are hermetic; keys come from the directories and from harvesting.
+log: /var/log/mailcloak/mailcloak.log
+
+keys:
+  pgp:
+    dir: /etc/mailcloak/pgp
+  smime:
+    dir: /etc/mailcloak/smime
+
+state_dir: /var/lib/mailcloak
+
+discovery:
+  wkd: false
+  openpgpkey: false
+  smimea: false
+  autocrypt: true
+  smime_ca_file: /etc/mailcloak/test-roots.pem   # the test senders' self-signed certs
+
+encrypt:
+  local_domains: [corp.test]
+  output: sendmail
+
+decrypt:
+  output: sendmail

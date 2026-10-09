@@ -1,0 +1,33 @@
+#!/bin/sh
+
+# PROVIDE: mailcloak
+# REQUIRE: LOGIN
+# BEFORE: mail
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=mailcloak
+rcvar=mailcloak_enable
+
+load_rc_config $name
+
+: ${mailcloak_config:=/usr/local/etc/mailcloak/mailcloak.yaml}
+: ${mailcloak_enable:=NO}
+: ${mailcloak_filters:="decrypt encrypt"}
+: ${mailcloak_user:=mailcloak}
+
+if [ -z "$2" ]; then
+	for filter in $mailcloak_filters; do
+		"$0" "$1" "$filter" || exit 1
+	done
+	exit 0
+fi
+
+filter=$2
+command=/usr/sbin/daemon
+pidfile=/var/run/mailcloak/${filter}.pid
+command_args="-f -P ${pidfile} -r -S -l mail -s info -T mailcloak-${filter} -u ${mailcloak_user} /usr/local/bin/mailcloak-${filter} -config ${mailcloak_config}"
+start_precmd="install -d -m 0750 -o ${mailcloak_user} -g ${mailcloak_user} /var/db/mailcloak && install -d -m 0755 /var/run/mailcloak"
+
+run_rc_command "$1"
