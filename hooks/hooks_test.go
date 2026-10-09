@@ -217,6 +217,28 @@ func TestDecryptStripsSpoofedHeaders(t *testing.T) {
 	}
 }
 
+func TestEncryptToSelf(t *testing.T) {
+	w := newWorld(t)
+	ours := &Decrypt{PGP: w.ourPGP, SMIME: w.ourSMIME, Log: log}
+	for _, self := range []bool{false, true} {
+		out := capture{}
+		h := pipeline.Chain(out, (&Encrypt{
+			PGP: w.ourPGP, SMIME: w.ourSMIME, Keys: w.ourKeys(), Prefer: []string{MethodPGP, MethodSMIME}, Mode: Opportunistic, EncryptToSelf: self, Log: log,
+		}).Middleware)
+		if err := h.Handle(context.Background(), &pipeline.Envelope{From: alice, To: []string{bob, carol}, Data: []byte(plainMsg)}); err != nil {
+			t.Fatal(err)
+		}
+		// The provider's Sent copy is one of these: the sender must be able
+		// to read it exactly when encrypt_to_self is on.
+		for _, r := range []string{bob, carol} {
+			got := runDecrypt(t, ours, out[r])
+			if readable := strings.Contains(got, "The secret number is 42."); readable != self {
+				t.Errorf("encrypt_to_self=%v: sender can read copy for %s: %v", self, r, readable)
+			}
+		}
+	}
+}
+
 func runDecrypt(t *testing.T, in *Decrypt, env *pipeline.Envelope) string {
 	t.Helper()
 	out := capture{}

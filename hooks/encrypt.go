@@ -60,7 +60,10 @@ type Encrypt struct {
 	// AdvertiseAutocrypt adds an Autocrypt header with the sender's PGP key.
 	AdvertiseAutocrypt bool
 	PreferEncrypt      string // "mutual" or "nopreference", for the header
-	Log                *slog.Logger
+	// EncryptToSelf also encrypts to the sender's own key, so the copy a
+	// provider saves to Sent stays readable to the sender.
+	EncryptToSelf bool
+	Log           *slog.Logger
 }
 
 // group is the recipients that share one treatment.
@@ -219,9 +222,21 @@ func (o *Encrypt) transform(method string, m *mimeutil.Message, g *group, sender
 	case methodLocal:
 		return m.Bytes(), nil
 	case MethodPGP:
-		return o.PGP.Encrypt(m, g.pgp, signer)
+		to := g.pgp
+		if o.EncryptToSelf {
+			if k := o.PGP.LocalKey(sender); k != nil && !slices.Contains(to, k) {
+				to = append(slices.Clip(to), k)
+			}
+		}
+		return o.PGP.Encrypt(m, to, signer)
 	case MethodSMIME:
-		return o.SMIME.Encrypt(m, g.certs, signer)
+		certs := g.certs
+		if o.EncryptToSelf {
+			if c := o.SMIME.LocalCert(sender); c != nil && !slices.ContainsFunc(certs, c.Equal) {
+				certs = append(slices.Clip(certs), c)
+			}
+		}
+		return o.SMIME.Encrypt(m, certs, signer)
 	default:
 		if signer != "" && o.SMIME != nil && o.SMIME.CanSign(signer) {
 			return o.SMIME.Sign(m, signer)
