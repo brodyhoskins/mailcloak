@@ -295,3 +295,51 @@ func verifySMIMESignature(t *testing.T, raw []byte) {
 		t.Error("signed content missing body")
 	}
 }
+
+func TestHeaderProtection(t *testing.T) {
+	w := newWorld(t)
+	out := capture{}
+	h := pipeline.Chain(out, (&Encrypt{
+		PGP: w.ourPGP, SMIME: w.ourSMIME, Keys: w.ourKeys(), Prefer: []string{MethodPGP, MethodSMIME}, Mode: Opportunistic,
+		ProtectHeaders: true, Log: log,
+	}).Middleware)
+	if err := h.Handle(context.Background(), &pipeline.Envelope{From: alice, To: []string{bob, carol, dave}, Data: []byte(plainMsg)}); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range []string{bob, carol} {
+		if !bytes.Contains(out[r].Data, []byte("Subject: [...]\r\n")) || bytes.Contains(out[r].Data, []byte("Quarterly")) {
+			t.Errorf("%s: Subject not hidden:\n%s", r, out[r].Data)
+		}
+	}
+	if string(out[dave].Data[:len("From:")]) != "From:" || !bytes.Contains(out[dave].Data, []byte("Subject: Quarterly numbers\r\n")) {
+		t.Errorf("dave: unencrypted mail lost its Subject:\n%s", out[dave].Data)
+	}
+
+	// A server on the way tags the Subject.
+	tag := func(env *pipeline.Envelope) *pipeline.Envelope {
+		c := env.Clone()
+		c.Data = bytes.Replace(c.Data, []byte("Subject: [...]"), []byte("Subject: ***UNCHECKED*** [...]"), 1)
+		return c
+	}
+	in := &Decrypt{PGP: w.theirPGP, SMIME: w.theirSMIME, Log: log}
+	got := runDecrypt(t, in, tag(out[bob]))
+	if !strings.Contains(got, "\r\nSubject: Quarterly numbers\r\n") || strings.Count(got, "Subject:") != 1 {
+		t.Errorf("bob: Subject not restored:\n%s", got)
+	}
+	for _, bad := range []string{"HP-Outer", "hp=", "hp-legacy-display", "UNCHECKED"} {
+		if strings.Contains(got, bad) {
+			t.Errorf("bob: %q left in:\n%s", bad, got)
+		}
+	}
+	if !strings.Contains(got, "\r\n\r\nThe secret number is 42.") || !strings.Contains(got, HeaderSignature+": pgp; status=valid") {
+		t.Errorf("bob: body or signature:\n%s", got)
+	}
+
+	// carol: the payload is inside alice's S/MIME signature, which the
+	// decrypt hook leaves for the client; the protected Subject is there.
+	got = runDecrypt(t, in, tag(out[carol]))
+	verifySMIMESignature(t, []byte(got))
+	if !strings.Contains(got, "Subject: Quarterly numbers\r\n") || !strings.Contains(got, "hp=cipher") {
+		t.Errorf("carol: no protected Subject inside:\n%s", got)
+	}
+}

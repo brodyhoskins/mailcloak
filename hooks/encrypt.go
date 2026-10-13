@@ -13,6 +13,7 @@ import (
 	"github.com/emersion/go-smtp"
 
 	"github.com/brodyhoskins/mailcloak/discover"
+	"github.com/brodyhoskins/mailcloak/hp"
 	"github.com/brodyhoskins/mailcloak/mimeutil"
 	"github.com/brodyhoskins/mailcloak/pgp"
 	"github.com/brodyhoskins/mailcloak/pipeline"
@@ -63,7 +64,10 @@ type Encrypt struct {
 	// EncryptToSelf also encrypts to the sender's own key, so the copy a
 	// provider saves to Sent stays readable to the sender.
 	EncryptToSelf bool
-	Log           *slog.Logger
+	// ProtectHeaders copies the header fields into the encrypted part and
+	// hides the Subject outside behind "[...]" (RFC 9788, see package hp).
+	ProtectHeaders bool
+	Log            *slog.Logger
 }
 
 // group is the recipients that share one treatment.
@@ -218,6 +222,11 @@ func (o *Encrypt) transform(method string, m *mimeutil.Message, g *group, sender
 	if alreadySigned {
 		signer = ""
 	}
+	// The header and entity to encrypt; local and plain mail use m.
+	outer, entity := m.SplitEntity()
+	if o.ProtectHeaders {
+		outer, entity = hp.Protect(m)
+	}
 	switch method {
 	case methodLocal:
 		return m.Bytes(), nil
@@ -228,7 +237,7 @@ func (o *Encrypt) transform(method string, m *mimeutil.Message, g *group, sender
 				to = append(slices.Clip(to), k)
 			}
 		}
-		return o.PGP.Encrypt(m, to, signer)
+		return o.PGP.EncryptEntity(outer, entity, to, signer)
 	case MethodSMIME:
 		certs := g.certs
 		if o.EncryptToSelf {
@@ -236,7 +245,7 @@ func (o *Encrypt) transform(method string, m *mimeutil.Message, g *group, sender
 				certs = append(slices.Clip(certs), c)
 			}
 		}
-		return o.SMIME.Encrypt(m, certs, signer)
+		return o.SMIME.EncryptEntity(outer, entity, certs, signer)
 	default:
 		if signer != "" && o.SMIME != nil && o.SMIME.CanSign(signer) {
 			return o.SMIME.Sign(m, signer)

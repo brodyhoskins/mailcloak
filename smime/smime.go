@@ -20,6 +20,7 @@ import (
 
 	"github.com/smallstep/pkcs7"
 
+	"github.com/brodyhoskins/mailcloak/hp"
 	"github.com/brodyhoskins/mailcloak/mimeutil"
 )
 
@@ -242,10 +243,16 @@ func (e *Engine) Sign(m *mimeutil.Message, signer string) ([]byte, error) {
 // Encrypt encrypts m to certs. If signer has a key the entity is signed first
 // (sign-then-encrypt), so the signature is protected by the envelope.
 func (e *Engine) Encrypt(m *mimeutil.Message, certs []*x509.Certificate, signer string) ([]byte, error) {
+	outer, entity := m.SplitEntity()
+	return e.EncryptEntity(outer, entity, certs, signer)
+}
+
+// EncryptEntity is Encrypt for a message already split into the header
+// outside the encryption and the entity inside, as hp.Protect splits it.
+func (e *Engine) EncryptEntity(outer mimeutil.Header, entity []byte, certs []*x509.Certificate, signer string) ([]byte, error) {
 	if len(certs) == 0 {
 		return nil, errors.New("smime: no recipients")
 	}
-	outer, entity := m.SplitEntity()
 	if signer != "" {
 		if id := e.signer(signer); id != nil {
 			var err error
@@ -269,6 +276,8 @@ var ErrNoKey = errors.New("smime: no matching private key")
 
 // Decrypt decrypts an enveloped message. The decrypted entity is returned
 // as-is, so an inner multipart/signed survives for the client to verify.
+// An entity with Header Protection that is not signed gets its header
+// fields inside in place of those outside (see hp.Unprotect).
 func (e *Engine) Decrypt(m *mimeutil.Message) ([]byte, error) {
 	der, err := base64.StdEncoding.DecodeString(string(bytes.Join(bytes.Fields(m.Body), nil)))
 	if err != nil {
@@ -287,7 +296,7 @@ func (e *Engine) Decrypt(m *mimeutil.Message) ([]byte, error) {
 			continue
 		}
 		outer, _ := m.SplitEntity()
-		return mimeutil.JoinEntity(outer, mimeutil.CRLF(entity))
+		return hp.Unprotect(outer, mimeutil.CRLF(entity))
 	}
 	return nil, ErrNoKey
 }

@@ -192,6 +192,8 @@ type Encrypt struct {
 		Advertise     *bool  `yaml:"advertise"`      // default true
 		PreferEncrypt string `yaml:"prefer_encrypt"` // mutual (default) | nopreference
 	} `yaml:"autocrypt"`
+	// HeaderProtection hides the Subject of encrypted mail (RFC 9788).
+	HeaderProtection *bool `yaml:"header_protection"` // default true
 }
 
 type Decrypt struct {
@@ -366,6 +368,9 @@ func (c *Config) applyDefaults() {
 	}
 	if e.Autocrypt.Advertise == nil {
 		e.Autocrypt.Advertise = boolPtr(true)
+	}
+	if e.HeaderProtection == nil {
+		e.HeaderProtection = boolPtr(true)
 	}
 	if e.Autocrypt.PreferEncrypt == "" {
 		e.Autocrypt.PreferEncrypt = "mutual"

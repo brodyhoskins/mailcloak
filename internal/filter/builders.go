@@ -45,6 +45,7 @@ func Encrypt(cfg *config.Config, log *slog.Logger) (pipeline.Middleware, error) 
 		StrictSources:      strict,
 		AdvertiseAutocrypt: *e.Autocrypt.Advertise,
 		PreferEncrypt:      e.Autocrypt.PreferEncrypt,
+		ProtectHeaders:     *e.HeaderProtection,
 		Log:                log,
 	}
 	return h.Middleware, nil

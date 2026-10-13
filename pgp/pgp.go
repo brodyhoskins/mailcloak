@@ -16,6 +16,7 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 
+	"github.com/brodyhoskins/mailcloak/hp"
 	"github.com/brodyhoskins/mailcloak/mimeutil"
 )
 
@@ -166,6 +167,13 @@ func IsEncrypted(m *mimeutil.Message) bool {
 // Encrypt encrypts the body entity of m to the keys in to and, if signer has
 // a private key, signs it in the same pass (RFC 3156 section 6.2).
 func (e *Engine) Encrypt(m *mimeutil.Message, to []*openpgp.Entity, signer string) ([]byte, error) {
+	outer, entity := m.SplitEntity()
+	return e.EncryptEntity(outer, entity, to, signer)
+}
+
+// EncryptEntity is Encrypt for a message already split into the header
+// outside the encryption and the entity inside, as hp.Protect splits it.
+func (e *Engine) EncryptEntity(outer mimeutil.Header, entity []byte, to []*openpgp.Entity, signer string) ([]byte, error) {
 	if len(to) == 0 {
 		return nil, errors.New("pgp: no recipients")
 	}
@@ -173,8 +181,6 @@ func (e *Engine) Encrypt(m *mimeutil.Message, to []*openpgp.Entity, signer strin
 	if signer != "" {
 		sign = e.signingKey(signer)
 	}
-
-	outer, entity := m.SplitEntity()
 
 	var armored bytes.Buffer
 	aw, err := armor.Encode(&armored, "PGP MESSAGE", nil)
@@ -228,7 +234,8 @@ type Result struct {
 var ErrNotEncrypted = errors.New("pgp: message is not PGP/MIME encrypted")
 
 // Decrypt decrypts a PGP/MIME message and returns it with the decrypted
-// entity in place of the encrypted body. Inline PGP is not handled.
+// entity in place of the encrypted body, and the header fields inside in
+// place of those outside if it has Header Protection (see hp.Unprotect). Inline PGP is not handled.
 func (e *Engine) Decrypt(m *mimeutil.Message) (*Result, error) {
 	mt, params := m.Header.MediaType()
 	if mt != "multipart/encrypted" || !strings.EqualFold(params["protocol"], "application/pgp-encrypted") {
@@ -268,7 +275,7 @@ func (e *Engine) Decrypt(m *mimeutil.Message) (*Result, error) {
 	}
 
 	outer, _ := m.SplitEntity()
-	res.Message, err = mimeutil.JoinEntity(outer, mimeutil.CRLF(entity))
+	res.Message, err = hp.Unprotect(outer, mimeutil.CRLF(entity))
 	return res, err
 }
 

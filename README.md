@@ -15,6 +15,8 @@ Each reads a message on `stdin` and writes it to stdout. Postfix runs them on ea
 
 `mailcloak-decrypt` decrypts [PGP/MIME](https://www.rfc-editor.org/rfc/rfc3156) and S/MIME mail it holds a key for and records the result in `X-Mailcloak-Decrypted` and `X-Mailcloak-Signature` headers. Incoming `X-Mailcloak-*` headers are stripped.
 
+Encrypted mail gets [Header Protection](https://www.rfc-editor.org/rfc/rfc9788) (`header_protection`, on by default). `mailcloak-encrypt` copies the headers into the encrypted part and replaces the Subject outside with `[...]`. Servers on the way do not see the real Subject, and a tag that a server adds to the Subject, such as `***UNCHECKED***`, does not reach the reader. A client that can decrypt but does not support Header Protection shows the Subject at the top of the message text. `mailcloak-decrypt` puts the protected headers back. For S/MIME mail that is signed inside the encryption, the protected headers stay inside the signature, and a client that supports Header Protection restores them when it checks the signature.
+
 ## Finding Keys
 
 Keys are looked up in this order, first hit wins:

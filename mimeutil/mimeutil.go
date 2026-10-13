@@ -222,3 +222,73 @@ func canonical(name string) string {
 	}
 	return strings.Join(parts, "-")
 }
+
+// Parts splits a multipart body at boundary (RFC 2046 section 5.1.1). Each
+// part keeps its own header block. The CRLF before each delimiter line
+// belongs to the delimiter, so it is in no part. ok is false when the body
+// has no closing delimiter.
+func Parts(body []byte, boundary string) (preamble []byte, parts [][]byte, epilogue []byte, ok bool) {
+	delim := []byte("--" + boundary)
+	start := -1 // start of the current part
+	for pos := 0; pos < len(body); {
+		next := len(body)
+		line := body[pos:]
+		if i := bytes.Index(line, []byte("\r\n")); i >= 0 {
+			line, next = line[:i], pos+i+2
+		}
+		if rest, found := bytes.CutPrefix(line, delim); found {
+			rest = bytes.TrimRight(rest, " \t")
+			closing := bytes.Equal(rest, []byte("--"))
+			if len(rest) == 0 || closing {
+				end := max(pos-2, 0, start)
+				if start < 0 {
+					preamble = body[:end]
+				} else {
+					parts = append(parts, body[start:end])
+				}
+				if closing {
+					return preamble, parts, body[next:], true
+				}
+				start = next
+			}
+		}
+		pos = next
+	}
+	return nil, nil, nil, false
+}
+
+// JoinParts is the reverse of Parts.
+func JoinParts(preamble []byte, parts [][]byte, epilogue []byte, boundary string) []byte {
+	var b bytes.Buffer
+	b.Write(preamble)
+	for _, p := range parts {
+		if b.Len() > 0 {
+			b.WriteString("\r\n")
+		}
+		b.WriteString("--" + boundary + "\r\n")
+		b.Write(p)
+	}
+	b.WriteString("\r\n--" + boundary + "--\r\n")
+	b.Write(epilogue)
+	return b.Bytes()
+}
+
+// Set replaces the first field named name with value, in its place, and
+// removes any others. It adds the field if there is none.
+func (h *Header) Set(name, value string) {
+	f := Field{Name: name, Raw: name + ": " + value + "\r\n"}
+	out := (*h)[:0:0]
+	done := false
+	for _, g := range *h {
+		switch {
+		case !strings.EqualFold(g.Name, name):
+			out = append(out, g)
+		case !done:
+			out, done = append(out, f), true
+		}
+	}
+	if !done {
+		out = append(out, f)
+	}
+	*h = out
+}

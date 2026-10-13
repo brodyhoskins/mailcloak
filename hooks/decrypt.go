@@ -36,7 +36,7 @@ func (in *Decrypt) Middleware(next pipeline.Handler) pipeline.Handler {
 			in.Log.Warn("decrypt: unparseable message, passing through", "err", err)
 			return next.Handle(ctx, env)
 		}
-		m.Header = m.Header.Without(func(n string) bool { return strings.HasPrefix(strings.ToLower(n), "x-mailcloak-") })
+		m.Header = m.Header.Without(ownField)
 
 		out := in.decrypt(m)
 		if in.Harvest != nil {
@@ -60,6 +60,8 @@ func (in *Decrypt) decrypt(m *mimeutil.Message) []byte {
 		if err != nil {
 			break
 		}
+		// The encrypted part can carry header fields too (Header Protection).
+		dm.Header = dm.Header.Without(ownField)
 		// Decryption strips the PGP signature along with the envelope, so
 		// record the verification result for the client.
 		dm.Header = prepend(dm.Header, HeaderDecrypted, "pgp")
@@ -82,12 +84,15 @@ func (in *Decrypt) decrypt(m *mimeutil.Message) []byte {
 			break
 		}
 		// Any inner S/MIME signature is left intact for the client to verify.
+		dm.Header = dm.Header.Without(ownField)
 		dm.Header = prepend(dm.Header, HeaderDecrypted, "smime")
 		in.Log.Info("decrypt: decrypted", "method", "smime")
 		return dm.Bytes()
 	}
 	return m.Bytes()
 }
+
+func ownField(name string) bool { return strings.HasPrefix(strings.ToLower(name), "x-mailcloak-") }
 
 func prepend(h mimeutil.Header, name, value string) mimeutil.Header {
 	var f mimeutil.Header
