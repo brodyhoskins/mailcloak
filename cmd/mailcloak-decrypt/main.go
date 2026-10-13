@@ -7,9 +7,10 @@ package main
 import (
 	"os"
 
+	"github.com/brodyhoskins/mailcloak/filters"
 	"github.com/brodyhoskins/mailcloak/internal/filter"
 )
 
 func main() {
-	os.Exit(filter.Run("decrypt", filter.Decrypt, os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
+	os.Exit(filter.Run("decrypt", filters.Decrypt, os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }

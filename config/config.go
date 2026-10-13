@@ -216,17 +216,24 @@ var knownSources = []string{"local", "wkd", "openpgpkey", "smimea", "smime-harve
 // the IO of filter ("encrypt" or "decrypt"), and validates what that filter
 // needs.
 func Load(path, filter string, o Overrides) (*Config, error) {
-	var c Config
+	var b []byte
 	if path != "" {
-		b, err := os.ReadFile(path)
-		if err != nil {
+		var err error
+		if b, err = os.ReadFile(path); err != nil {
 			return nil, err
 		}
-		dec := yaml.NewDecoder(bytes.NewReader(b))
-		dec.KnownFields(true)
-		if err := dec.Decode(&c); err != nil && !errors.Is(err, io.EOF) {
-			return nil, fmt.Errorf("config: %w", err)
-		}
+	}
+	return Parse(b, filter, o)
+}
+
+// Parse is Load for configuration that is already in memory, for programs
+// that embed the filters. Empty b means no file.
+func Parse(b []byte, filter string, o Overrides) (*Config, error) {
+	var c Config
+	dec := yaml.NewDecoder(bytes.NewReader(b))
+	dec.KnownFields(true)
+	if err := dec.Decode(&c); err != nil && !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("config: %w", err)
 	}
 	fio := c.IO(filter)
 	if fio == nil {

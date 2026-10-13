@@ -1,4 +1,7 @@
-package filter
+// Package filters constructs the encrypt and decrypt middlewares from a loaded
+// configuration. The mailcloak filters use it, and so can programs that embed
+// them, such as language bindings.
+package filters
 
 import (
 	"bytes"

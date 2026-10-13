@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brodyhoskins/mailcloak/filters"
 	"github.com/brodyhoskins/mailcloak/internal/testkeys"
 )
 
@@ -30,9 +31,9 @@ func run(t *testing.T, which string, stdin string, args ...string) result {
 	if !slices.Contains(args, "-config") {
 		args = append([]string{"-config", writeConfig(t, "")}, args...)
 	}
-	build := map[string]Builder{"encrypt": Encrypt, "decrypt": Decrypt}[which]
+	builder := map[string]Builder{"encrypt": filters.Encrypt, "decrypt": filters.Decrypt}[which]
 	var out, errb bytes.Buffer
-	code := Run(which, build, args, strings.NewReader(stdin), &out, &errb)
+	code := Run(which, builder, args, strings.NewReader(stdin), &out, &errb)
 	return result{code, out.String(), errb.String()}
 }
 
