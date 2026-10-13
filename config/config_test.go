@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // resolvConf points ResolvConf at a file naming server for this test.
@@ -127,5 +129,17 @@ func TestPathExpansionAndStateDirectory(t *testing.T) {
 	}
 	if _, err := load(t, "state_dir: ${NOT_SET_ANYWHERE}/x\n"); err == nil || !strings.Contains(err.Error(), "NOT_SET_ANYWHERE") {
 		t.Fatalf("unset variable must be an error: %v", err)
+	}
+}
+
+// TestBridgeSection: the filters accept and ignore mailcloak-bridge's
+// settings.
+func TestBridgeSection(t *testing.T) {
+	c, err := load(t, "bridge:\n  imap: {listen: \":993\"}\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Bridge.Kind != yaml.MappingNode {
+		t.Errorf("bridge: kind %v, want a mapping", c.Bridge.Kind)
 	}
 }

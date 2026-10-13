@@ -1,6 +1,7 @@
 // Package config loads mailcloak.yaml, the single configuration file shared
-// by both filters. Shared settings (keys, state, discovery) are top-level;
-// each filter's own settings live under "encrypt:" or "decrypt:".
+// by both filters and mailcloak-bridge. Shared settings (keys, state,
+// discovery) are top-level; each filter's own settings live under
+// "encrypt:" or "decrypt:", and the bridge's under "bridge:".
 package config
 
 import (
@@ -96,6 +97,10 @@ type Config struct {
 
 	Encrypt Encrypt `yaml:"encrypt"`
 	Decrypt Decrypt `yaml:"decrypt"`
+
+	// Bridge holds mailcloak-bridge's own settings. The filters ignore it;
+	// the bridge decodes it.
+	Bridge yaml.Node `yaml:"bridge"`
 }
 
 type Keys struct {

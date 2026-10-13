@@ -1,6 +1,6 @@
-# /etc/mailcloak/mailcloak.yaml — read by both mailcloak-encrypt and
-# mailcloak-decrypt. Shared settings are top-level; each filter's own settings
-# are under encrypt: / decrypt:. Most can also be given as flags
+# /etc/mailcloak/mailcloak.yaml — read by mailcloak-encrypt, mailcloak-decrypt
+# and mailcloak-bridge. Shared settings are top-level; each filter's own
+# settings are under encrypt: / decrypt:, and the bridge's under bridge:. Most can also be given as flags
 # (-pgp, -smime, -state, -output, -listen). Path settings may use ${VAR},
 # e.g. ${RUNTIME_DIRECTORY} under systemd.
 
@@ -67,3 +67,8 @@ decrypt:
   output: sendmail
   # listen: unix:/var/spool/postfix/mailcloak/decrypt.sock
   # output: smtp:127.0.0.1:10026
+
+# mailcloak-bridge's settings (listeners, accounts, cache). The filters
+# ignore this section. See mailcloak-bridge's examples/mailcloak.yaml.
+# bridge:
+#   ...
