@@ -5,7 +5,7 @@ go 1.27.3
 require (
 	github.com/ProtonMail/go-crypto v1.5.2
 	github.com/emersion/go-smtp v0.25.0
-	github.com/klauspost/compress v1.20.1
+	github.com/klauspost/compress v1.20.3
 	github.com/miekg/dns v1.1.73
 	github.com/smallstep/pkcs7 v0.2.3
 	gopkg.in/yaml.v3 v3.0.1
